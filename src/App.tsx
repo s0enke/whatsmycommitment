@@ -1,10 +1,35 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import "./App.css";
 import axios from "axios";
+
+export type Data = {
+  products: {
+    attributes: {
+      instanceType: string;
+    };
+  }[];
+};
+
 function App() {
+  const [loading, setLoading] = useState(true);
   const [percentCompleted, setPercentCompleted] = useState(0);
+  const [data, setData] = useState<Data>({ products: [] });
 
   const initialized = useRef(false);
+
+  const instances = useMemo(() => {
+    if (!initialized.current) {
+      return [];
+    }
+    return data.products
+      .reduce<string[]>((acc, product) => {
+        if (!acc.includes(product.attributes.instanceType)) {
+          acc.push(product.attributes.instanceType);
+        }
+        return acc;
+      }, [])
+      .sort();
+  }, [data]);
 
   useEffect(() => {
     if (initialized.current) {
@@ -27,7 +52,8 @@ function App() {
             },
           },
         );
-        console.log(res.data);
+        setData(res.data);
+        setLoading(false);
       } catch (error) {
         console.error("error", error);
       }
@@ -36,9 +62,20 @@ function App() {
 
   return (
     <>
-      <div>
-        <progress max={100} value={percentCompleted} className="sr-only" />
-      </div>
+      {loading ? (
+        <div>
+          <progress max={100} value={percentCompleted} className="sr-only" />
+        </div>
+      ) : (
+        <>
+          <h1>Instances</h1>
+          <ul role="instances">
+            {instances.map((instance) => (
+              <li key={instance}>{instance}</li>
+            ))}
+          </ul>
+        </>
+      )}
     </>
   );
 }
